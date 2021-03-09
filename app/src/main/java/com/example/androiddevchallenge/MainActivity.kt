@@ -24,6 +24,27 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.androiddevchallenge.ui.theme.MyTheme
+import android.os.CountDownTimer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PauseCircleOutline
+import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+var totalSeconds = 1500
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +61,7 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun MyApp() {
     Surface(color = MaterialTheme.colors.background) {
-        Text(text = "Ready... Set... GO!")
+        PomodoroScreen()
     }
 }
 
@@ -59,3 +80,110 @@ fun DarkPreview() {
         MyApp()
     }
 }
+
+@Composable
+fun PomodoroScreen() {
+    var secondsLeft by remember { mutableStateOf(totalSeconds) }
+    var isTimerRunning by remember { mutableStateOf(false) }
+    val timer = object : CountDownTimer(totalSeconds * 1000L, 1000) {
+        override fun onTick(millisUntilFinished: Long) {
+            secondsLeft -= 1
+            if (secondsLeft <= 0) {
+                secondsLeft = totalSeconds
+                isTimerRunning = false
+                this.cancel()
+            }
+        }
+
+        override fun onFinish() {
+            isTimerRunning = false
+        }
+    }
+    Scaffold {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(28.dp))
+            Text("Pomodoro", color = primaryColor, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(76.dp))
+            PomodoroTimer(secondsLeft)
+            Spacer(modifier = Modifier.height(56.dp))
+            PlayPauseButton(isTimerRunning) {
+                isTimerRunning = !isTimerRunning
+                if (isTimerRunning) timer.start() else timer.cancel()
+            }
+        }
+    }
+
+}
+
+@Composable
+fun PlayPauseButton(isPlaying: Boolean, onClick: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(23.dp),
+        modifier = Modifier
+            .size(46.dp)
+            .clickable(onClick = { onClick() }),
+        backgroundColor = secondaryColor
+    ) {
+        Icon(
+            modifier = Modifier.size(14.dp),
+            imageVector = if (isPlaying) Icons.Outlined.PauseCircleOutline else Icons.Outlined.PlayCircleOutline,
+            tint = primaryColor,
+            contentDescription = null
+        )
+    }
+}
+
+@Composable
+fun PomodoroTimer(secondsLeft: Int) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        ProgressDial(secondsLeft * 100 / totalSeconds )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "${secondsLeft / 60}",
+                color = primaryTextColor,
+                fontSize = 72.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "minutes",
+                color = secondaryTextColor,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+        }
+    }
+}
+
+@Composable
+fun ProgressDial(progress: Int) {
+    println("progress: $progress")
+    val animatedProgress = animateFloatAsState(progress * 3.6f).value
+    Box(contentAlignment = Alignment.Center) {
+        Donut(color = secondaryColor, sweepAngle = 360f)
+        Donut(color = primaryColor, sweepAngle = 0f - animatedProgress)
+    }
+}
+
+@Composable
+fun Donut(color: Color, sweepAngle: Float) {
+    Canvas(modifier = Modifier
+        .fillMaxWidth(0.6f)
+        .then(Modifier.aspectRatio(1f)), onDraw = {
+        drawArc(
+            color,
+            startAngle = 270f,
+            sweepAngle = sweepAngle,
+            false,
+            style = Stroke(this.size.width / 16, cap = StrokeCap.Round)
+        )
+    })
+}
+
+val primaryColor = Color(248, 89, 89)
+val secondaryColor = Color(255, 228, 228)
+val primaryTextColor = Color.Black
+val secondaryTextColor = Color(134, 149, 169)
